@@ -19,6 +19,7 @@ async function ensureProjectAccess(projectId, userId) {
   if (!membership) {
     const error = new Error('You are not a member of this organization');
     error.statusCode = 403;
+    error.errorCode = 'ORG_MEMBERSHIP_REQUIRED';
     throw error;
   }
 
