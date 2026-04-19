@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AuthShell from '../components/AuthShell';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const from = location.state?.from?.pathname || '/organizations';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,7 +18,7 @@ export default function Login() {
     setSubmitting(true);
     try {
       await login(email, password);
-      navigate(from, { replace: true });
+      navigate('/organizations', { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Login failed';
       setError(msg);

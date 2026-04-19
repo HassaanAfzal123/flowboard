@@ -26,7 +26,6 @@ export default function Home() {
   return (
     <PublicShell variant="landing">
       <section className="landing-hero">
-        <p className="landing-kicker">Multi-tenant · RBAC · MERN</p>
         <h1 className="landing-title">
           Run projects and tasks <span className="landing-accent">per organization</span>, securely.
         </h1>

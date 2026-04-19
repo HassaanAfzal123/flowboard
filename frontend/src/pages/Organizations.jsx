@@ -81,7 +81,6 @@ export default function Organizations() {
                 <div className="org-card-header">
                   <div>
                     <strong>{org.name}</strong>
-                    <span className="muted"> · {org.slug}</span>
                   </div>
                   <span className="muted">Your role: {org.role || '—'}</span>
                 </div>
