@@ -7,11 +7,11 @@ function authMiddleware(req, res, next) {
   const [, token] = header.split(' ');
 
   if (!token) {
-    return res.status(401).json({ message: 'Authorization token missing' });
+    return res.status(401).json({ message: 'Authorization token missing', code: 'AUTH_TOKEN_MISSING' });
   }
 
   if (!JWT_SECRET) {
-    return res.status(500).json({ message: 'JWT secret is not configured' });
+    return res.status(500).json({ message: 'JWT secret is not configured', code: 'INTERNAL_ERROR' });
   }
 
   try {
@@ -19,7 +19,7 @@ function authMiddleware(req, res, next) {
     req.user = { id: payload.userId };
     return next();
   } catch (err) {
-    return res.status(401).json({ message: 'Invalid or expired token' });
+    return res.status(401).json({ message: 'Invalid or expired token', code: 'AUTH_INVALID_TOKEN' });
   }
 }
 

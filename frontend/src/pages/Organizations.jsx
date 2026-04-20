@@ -6,6 +6,7 @@ export default function Organizations() {
   const [organizations, setOrganizations] = useState([]);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -26,6 +27,18 @@ export default function Organizations() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    try {
+      const msg = sessionStorage.getItem('flowboard_notice');
+      if (msg) {
+        setNotice(msg);
+        sessionStorage.removeItem('flowboard_notice');
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
 
   async function handleCreate(e) {
     e.preventDefault();
@@ -67,6 +80,7 @@ export default function Organizations() {
       </form>
 
       {error ? <p className="error">{error}</p> : null}
+      {notice ? <p className="muted">{notice}</p> : null}
 
       {loading ? (
         <p className="muted">Loading organizations…</p>

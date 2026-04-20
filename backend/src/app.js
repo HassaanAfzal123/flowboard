@@ -13,6 +13,27 @@ const taskRoutes = require('./routes/task.routes');
 const commentRoutes = require('./routes/comment.routes');
 const notificationRoutes = require('./routes/notification.routes');
 
+function inferErrorCode(status, message) {
+  if (status === 401) {
+    if (message === 'Authorization token missing') return 'AUTH_TOKEN_MISSING';
+    if (message === 'Invalid or expired token') return 'AUTH_INVALID_TOKEN';
+    return 'AUTH_REQUIRED';
+  }
+
+  if (message === 'You are not a member of this organization') return 'ORG_MEMBERSHIP_REQUIRED';
+  if (message === 'Organization not found') return 'ORGANIZATION_NOT_FOUND';
+  if (message === 'Project not found') return 'PROJECT_NOT_FOUND';
+  if (message === 'Task not found') return 'TASK_NOT_FOUND';
+  if (message === 'Comment not found') return 'COMMENT_NOT_FOUND';
+  if (message === 'Member not found in this organization') return 'MEMBER_NOT_FOUND';
+
+  if (status === 404) return 'RESOURCE_NOT_FOUND';
+  if (status === 403) return 'FORBIDDEN';
+  if (status === 400) return 'BAD_REQUEST';
+  if (status >= 500) return 'INTERNAL_ERROR';
+  return 'REQUEST_FAILED';
+}
+
 // Core middlewares
 app.use(helmet());
 app.use(cors());
@@ -38,8 +59,8 @@ app.use((err, req, res, next) => {
   console.error(err);
   const status = err.statusCode || 500;
   const message = err.message || 'Internal server error';
-  const code = err.errorCode;
-  res.status(status).json({ message, ...(code ? { code } : {}) });
+  const code = err.errorCode || inferErrorCode(status, message);
+  res.status(status).json({ message, code });
 });
 
 module.exports = app;
