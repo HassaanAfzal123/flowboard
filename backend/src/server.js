@@ -1,16 +1,21 @@
 const http = require('http');
 const mongoose = require('mongoose');
 const app = require('./app');
-
-const PORT = process.env.PORT || 4000;
-const MONGODB_URI = process.env.MONGODB_URI;
-
-if (!MONGODB_URI) {
-  console.warn('Warning: MONGODB_URI is not set. Backend will start but database operations will fail until it is configured.');
-}
+const { ensureRuntimeConfig } = require('./config/runtime-config');
 
 async function start() {
   try {
+    await ensureRuntimeConfig();
+
+    const PORT = process.env.PORT || 4000;
+    const MONGODB_URI = process.env.MONGODB_URI;
+
+    if (!MONGODB_URI) {
+      console.warn(
+        'Warning: MONGODB_URI is not set. Backend will start but database operations will fail until it is configured.'
+      );
+    }
+
     if (MONGODB_URI) {
       await mongoose.connect(MONGODB_URI);
       console.log('Connected to MongoDB');

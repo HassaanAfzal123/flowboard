@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: FlowBoard backend on AWS Lambda + HTTP API.
+
+Parameters:
+  StageName:
+    Type: String
+    Default: prod
+  SsmParamPrefix:
+    Type: String
+    Default: /flowboard/prod
+    Description: Prefix containing MONGODB_URI, JWT_SECRET, REDIS_URL, FRONTEND_ORIGIN.
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 20
+    MemorySize: 512
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        NODE_ENV: production
+        SSM_PARAM_PREFIX: !Ref SsmParamPrefix
+        PORT: 4000
+
+Resources:
+  FlowboardHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref StageName
+
+  FlowboardApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub flowboard-api-${StageName}
+      CodeUri: .
+      Handler: src/lambda.handler
+      Events:
+        ApiProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref FlowboardHttpApi
+            Path: /{proxy+}
+            Method: ANY
+        ApiRoot:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref FlowboardHttpApi
+            Path: /
+            Method: ANY
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameters
+                - ssm:GetParameter
+              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SsmParamPrefix}/*
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+              Resource: '*'
+              Condition:
+                StringEquals:
+                  kms:ViaService: !Sub ssm.${AWS::Region}.amazonaws.com
+
+  FlowboardLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/flowboard-api-${StageName}
+      RetentionInDays: 14
+
+  FlowboardFunctionErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub flowboard-api-${StageName}-errors
+      AlarmDescription: Alarm when Lambda function reports errors.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref FlowboardApiFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+Outputs:
+  ApiUrl:
+    Description: HTTP API endpoint URL
+    Value: !Sub https://${FlowboardHttpApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}
+  FunctionName:
+    Description: Lambda function name
+    Value: !Ref FlowboardApiFunction

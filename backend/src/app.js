@@ -34,9 +34,29 @@ function inferErrorCode(status, message) {
   return 'REQUEST_FAILED';
 }
 
+function buildCorsOptions() {
+  const allowedOrigins = (process.env.FRONTEND_ORIGIN || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (!allowedOrigins.length) {
+    return {};
+  }
+
+  return {
+    origin(origin, callback) {
+      // Allow non-browser clients and same-origin requests with no Origin header.
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error('CORS origin not allowed'));
+    },
+  };
+}
+
 // Core middlewares
 app.use(helmet());
-app.use(cors());
+app.use(cors(buildCorsOptions()));
 app.use(express.json());
 app.use(morgan('dev'));
 
