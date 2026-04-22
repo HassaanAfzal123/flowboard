@@ -22,3 +22,13 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .cursor/
+
+# AWS SAM build artifacts
+backend/.aws-sam/
+samconfig.toml
+
+# Temporary AWS CLI working files
+frontend/cf*.json
+frontend/bucket-policy.json
+frontend/oac.json
+frontend/policy.json

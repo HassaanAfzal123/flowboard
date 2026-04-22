@@ -1,15 +1,12 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: FlowBoard backend on AWS Lambda + HTTP API.
+Description: FlowBoard backend on AWS Lambda + HTTP API
 
 Parameters:
-  StageName:
-    Type: String
-    Default: prod
   SsmParamPrefix:
     Type: String
     Default: /flowboard/prod
-    Description: Prefix containing MONGODB_URI, JWT_SECRET, REDIS_URL, FRONTEND_ORIGIN.
+    Description: Prefix containing MONGODB_URI, JWT_SECRET, REDIS_URL, FRONTEND_ORIGIN
 
 Globals:
   Function:
@@ -25,17 +22,29 @@ Globals:
         PORT: 4000
 
 Resources:
+
   FlowboardHttpApi:
     Type: AWS::Serverless::HttpApi
     Properties:
-      StageName: !Ref StageName
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        AllowHeaders:
+          - "*"
 
   FlowboardApiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub flowboard-api-${StageName}
+      FunctionName: flowboard-api
       CodeUri: .
       Handler: src/lambda.handler
+
       Events:
         ApiProxy:
           Type: HttpApi
@@ -43,12 +52,16 @@ Resources:
             ApiId: !Ref FlowboardHttpApi
             Path: /{proxy+}
             Method: ANY
+            PayloadFormatVersion: "2.0"
+
         ApiRoot:
           Type: HttpApi
           Properties:
             ApiId: !Ref FlowboardHttpApi
             Path: /
             Method: ANY
+            PayloadFormatVersion: "2.0"
+
       Policies:
         - AWSLambdaBasicExecutionRole
         - Version: '2012-10-17'
@@ -61,7 +74,7 @@ Resources:
             - Effect: Allow
               Action:
                 - kms:Decrypt
-              Resource: '*'
+              Resource: "*"
               Condition:
                 StringEquals:
                   kms:ViaService: !Sub ssm.${AWS::Region}.amazonaws.com
@@ -69,14 +82,14 @@ Resources:
   FlowboardLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/flowboard-api-${StageName}
+      LogGroupName: /aws/lambda/flowboard-api
       RetentionInDays: 14
 
   FlowboardFunctionErrorAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub flowboard-api-${StageName}-errors
-      AlarmDescription: Alarm when Lambda function reports errors.
+      AlarmName: flowboard-api-errors
+      AlarmDescription: Alarm when Lambda function reports errors
       Namespace: AWS/Lambda
       MetricName: Errors
       Dimensions:
@@ -92,7 +105,8 @@ Resources:
 Outputs:
   ApiUrl:
     Description: HTTP API endpoint URL
-    Value: !Sub https://${FlowboardHttpApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}
+    Value: !Sub https://${FlowboardHttpApi}.execute-api.${AWS::Region}.amazonaws.com
+
   FunctionName:
     Description: Lambda function name
     Value: !Ref FlowboardApiFunction
