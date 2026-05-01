@@ -1,0 +1,107 @@
+name: Rollback Serverless Backend
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: Select environment to rollback
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      git_ref:
+        description: Commit SHA or tag to rollback to
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  rollback:
+    name: Rollback stack
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target_environment == 'prod' && 'production' || inputs.target_environment }}
+    concurrency:
+      group: rollback-${{ inputs.target_environment }}
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout target ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.git_ref }}
+      - name: Validate environment configuration
+        shell: bash
+        run: |
+          if [[ -z "${{ secrets.AWS_ROLE_TO_ASSUME }}" ]]; then
+            echo "Missing required environment secret: AWS_ROLE_TO_ASSUME"
+            exit 1
+          fi
+          if [[ -z "${{ vars.AWS_REGION }}" ]]; then
+            echo "Missing required environment variable: AWS_REGION"
+            exit 1
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup AWS SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Resolve rollback target values
+        id: target
+        shell: bash
+        run: |
+          TARGET="${{ inputs.target_environment }}"
+          echo "stack_name=flowboard-$TARGET" >> "$GITHUB_OUTPUT"
+          echo "env_name=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "ssm_prefix=/flowboard/$TARGET" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy selected ref
+        run: |
+          sam build --template-file template.yaml --cached
+          sam deploy \
+            --stack-name "${{ steps.target.outputs.stack_name }}" \
+            --resolve-s3 \
+            --capabilities CAPABILITY_IAM \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              EnvironmentName="${{ steps.target.outputs.env_name }}" \
+              SsmParamPrefix="${{ steps.target.outputs.ssm_prefix }}"
+
+      - name: Smoke test rolled-back API
+        shell: bash
+        run: |
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name "${{ steps.target.outputs.stack_name }}" \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text)
+          curl --fail --silent --show-error "$API_URL/api/health" > /dev/null
+          {
+            echo "### Rollback Completed"
+            echo "- Environment: \`${{ inputs.target_environment }}\`"
+            echo "- Ref: \`${{ inputs.git_ref }}\`"
+            echo "- Stack: \`${{ steps.target.outputs.stack_name }}\`"
+            echo "- API: $API_URL"
+            echo "- Status: smoke test passed"
+          } >> "$GITHUB_STEP_SUMMARY"

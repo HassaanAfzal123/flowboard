@@ -1,0 +1,125 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CloudFormationManageFlowboardStacks",
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:CreateChangeSet",
+        "cloudformation:CreateStack",
+        "cloudformation:DeleteChangeSet",
+        "cloudformation:DeleteStack",
+        "cloudformation:Describe*",
+        "cloudformation:ExecuteChangeSet",
+        "cloudformation:GetTemplateSummary",
+        "cloudformation:List*",
+        "cloudformation:UpdateStack",
+        "cloudformation:ValidateTemplate"
+      ],
+      "Resource": [
+        "arn:aws:cloudformation:<AWS_REGION>:<ACCOUNT_ID>:stack/flowboard-dev/*",
+        "arn:aws:cloudformation:<AWS_REGION>:<ACCOUNT_ID>:stack/flowboard-staging/*",
+        "arn:aws:cloudformation:<AWS_REGION>:<ACCOUNT_ID>:stack/flowboard-prod/*"
+      ]
+    },
+    {
+      "Sid": "S3ForSamArtifacts",
+      "Effect": "Allow",
+      "Action": [
+        "s3:CreateBucket",
+        "s3:DeleteObject",
+        "s3:GetBucketLocation",
+        "s3:GetObject",
+        "s3:ListBucket",
+        "s3:PutBucketVersioning",
+        "s3:PutEncryptionConfiguration",
+        "s3:PutObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::aws-sam-cli-managed-default-samclisourcebucket-*",
+        "arn:aws:s3:::aws-sam-cli-managed-default-samclisourcebucket-*/*"
+      ]
+    },
+    {
+      "Sid": "ManageLambdaAndApiResources",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:AddPermission",
+        "lambda:CreateFunction",
+        "lambda:DeleteFunction",
+        "lambda:GetFunction",
+        "lambda:GetFunctionConfiguration",
+        "lambda:ListTags",
+        "lambda:RemovePermission",
+        "lambda:TagResource",
+        "lambda:UntagResource",
+        "lambda:UpdateFunctionCode",
+        "lambda:UpdateFunctionConfiguration",
+        "apigateway:GET",
+        "apigateway:POST",
+        "apigateway:PUT",
+        "apigateway:PATCH",
+        "apigateway:DELETE"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ManageObservabilityResources",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:DeleteLogGroup",
+        "logs:PutRetentionPolicy",
+        "logs:DescribeLogGroups",
+        "cloudwatch:DeleteAlarms",
+        "cloudwatch:DescribeAlarms",
+        "cloudwatch:PutMetricAlarm"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "IamPassRoleForCloudFormationAndLambda",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:DeleteRole",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:GetRole",
+        "iam:PassRole",
+        "iam:PutRolePolicy",
+        "iam:TagRole",
+        "iam:UntagRole"
+      ],
+      "Resource": "arn:aws:iam::<ACCOUNT_ID>:role/*flowboard*"
+    },
+    {
+      "Sid": "ReadSSMParametersByEnvironmentPrefix",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:GetParametersByPath"
+      ],
+      "Resource": [
+        "arn:aws:ssm:<AWS_REGION>:<ACCOUNT_ID>:parameter/flowboard/dev/*",
+        "arn:aws:ssm:<AWS_REGION>:<ACCOUNT_ID>:parameter/flowboard/staging/*",
+        "arn:aws:ssm:<AWS_REGION>:<ACCOUNT_ID>:parameter/flowboard/prod/*"
+      ]
+    },
+    {
+      "Sid": "KmsDecryptViaSsmOnly",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "ssm.<AWS_REGION>.amazonaws.com"
+        }
+      }
+    }
+  ]
+}

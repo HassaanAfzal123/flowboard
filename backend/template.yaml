@@ -3,6 +3,14 @@ Transform: AWS::Serverless-2016-10-31
 Description: FlowBoard backend on AWS Lambda + HTTP API
 
 Parameters:
+  EnvironmentName:
+    Type: String
+    Default: prod
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Deployment environment name used in resource naming
   SsmParamPrefix:
     Type: String
     Default: /flowboard/prod
@@ -41,7 +49,7 @@ Resources:
   FlowboardApiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: flowboard-api
+      FunctionName: !Sub flowboard-api-${EnvironmentName}
       CodeUri: .
       Handler: src/lambda.handler
 
@@ -82,13 +90,13 @@ Resources:
   FlowboardLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: /aws/lambda/flowboard-api
+      LogGroupName: !Sub /aws/lambda/flowboard-api-${EnvironmentName}
       RetentionInDays: 14
 
   FlowboardFunctionErrorAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: flowboard-api-errors
+      AlarmName: !Sub flowboard-api-errors-${EnvironmentName}
       AlarmDescription: Alarm when Lambda function reports errors
       Namespace: AWS/Lambda
       MetricName: Errors

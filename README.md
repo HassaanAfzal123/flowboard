@@ -175,6 +175,10 @@ docker run -p 4000:4000 \
 
 Full step-by-step CLI runbook: [`docs/aws-stage-1-3-runbook.md`](docs/aws-stage-1-3-runbook.md)
 
+CI/CD operations runbook: [`docs/cicd-runbook.md`](docs/cicd-runbook.md)
+
+User setup checklist for enabling CI/CD: [`docs/required-actions-from-user.md`](docs/required-actions-from-user.md)
+
 Summary:
 
 1. Store secrets in SSM Parameter Store as `SecureString`

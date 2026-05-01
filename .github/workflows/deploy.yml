@@ -1,0 +1,227 @@
+name: Deploy Serverless Backend
+
+on:
+  push:
+    branches:
+      - dev
+      - staging
+      - main
+    paths:
+      - backend/**
+      - .github/workflows/deploy.yml
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: Select environment to deploy
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-dev:
+    if: github.ref_name == 'dev' || (github.event_name == 'workflow_dispatch' && inputs.target_environment == 'dev')
+    name: Deploy dev
+    runs-on: ubuntu-latest
+    environment: dev
+    concurrency:
+      group: deploy-dev
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Validate environment configuration
+        shell: bash
+        run: |
+          if [[ -z "${{ secrets.AWS_ROLE_TO_ASSUME }}" ]]; then
+            echo "Missing required environment secret: AWS_ROLE_TO_ASSUME"
+            exit 1
+          fi
+          if [[ -z "${{ vars.AWS_REGION }}" ]]; then
+            echo "Missing required environment variable: AWS_REGION"
+            exit 1
+          fi
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Setup AWS SAM CLI
+        uses: aws-actions/setup-sam@v2
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Build and deploy stack
+        run: |
+          sam build --template-file template.yaml --cached
+          sam deploy \
+            --stack-name flowboard-dev \
+            --resolve-s3 \
+            --capabilities CAPABILITY_IAM \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              EnvironmentName=dev \
+              SsmParamPrefix=/flowboard/dev
+      - name: Smoke test deployed API
+        shell: bash
+        run: |
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name flowboard-dev \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text)
+          curl --fail --silent --show-error "$API_URL/api/health" > /dev/null
+          {
+            echo "### Dev Deploy"
+            echo "- Stack: \`flowboard-dev\`"
+            echo "- API: $API_URL"
+            echo "- Status: smoke test passed"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-staging:
+    if: github.ref_name == 'staging' || (github.event_name == 'workflow_dispatch' && inputs.target_environment == 'staging')
+    name: Deploy staging
+    runs-on: ubuntu-latest
+    environment: staging
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Validate environment configuration
+        shell: bash
+        run: |
+          if [[ -z "${{ secrets.AWS_ROLE_TO_ASSUME }}" ]]; then
+            echo "Missing required environment secret: AWS_ROLE_TO_ASSUME"
+            exit 1
+          fi
+          if [[ -z "${{ vars.AWS_REGION }}" ]]; then
+            echo "Missing required environment variable: AWS_REGION"
+            exit 1
+          fi
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Setup AWS SAM CLI
+        uses: aws-actions/setup-sam@v2
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Build and deploy stack
+        run: |
+          sam build --template-file template.yaml --cached
+          sam deploy \
+            --stack-name flowboard-staging \
+            --resolve-s3 \
+            --capabilities CAPABILITY_IAM \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              EnvironmentName=staging \
+              SsmParamPrefix=/flowboard/staging
+      - name: Smoke test deployed API
+        shell: bash
+        run: |
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name flowboard-staging \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text)
+          curl --fail --silent --show-error "$API_URL/api/health" > /dev/null
+          {
+            echo "### Staging Deploy"
+            echo "- Stack: \`flowboard-staging\`"
+            echo "- API: $API_URL"
+            echo "- Status: smoke test passed"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-prod:
+    if: github.ref_name == 'main' || (github.event_name == 'workflow_dispatch' && inputs.target_environment == 'prod')
+    name: Deploy production
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Validate environment configuration
+        shell: bash
+        run: |
+          if [[ -z "${{ secrets.AWS_ROLE_TO_ASSUME }}" ]]; then
+            echo "Missing required environment secret: AWS_ROLE_TO_ASSUME"
+            exit 1
+          fi
+          if [[ -z "${{ vars.AWS_REGION }}" ]]; then
+            echo "Missing required environment variable: AWS_REGION"
+            exit 1
+          fi
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Setup AWS SAM CLI
+        uses: aws-actions/setup-sam@v2
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Build and deploy stack
+        run: |
+          sam build --template-file template.yaml --cached
+          sam deploy \
+            --stack-name flowboard-prod \
+            --resolve-s3 \
+            --capabilities CAPABILITY_IAM \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              EnvironmentName=prod \
+              SsmParamPrefix=/flowboard/prod
+      - name: Smoke test deployed API
+        shell: bash
+        run: |
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name flowboard-prod \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text)
+          curl --fail --silent --show-error "$API_URL/api/health" > /dev/null
+          {
+            echo "### Production Deploy"
+            echo "- Stack: \`flowboard-prod\`"
+            echo "- API: $API_URL"
+            echo "- Status: smoke test passed"
+          } >> "$GITHUB_STEP_SUMMARY"
