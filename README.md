@@ -2,7 +2,7 @@
 
 Multi-tenant project management SaaS — MERN stack with JWT auth, Redis caching, and a full AWS cloud deployment. Built phase-by-phase with a focus on production patterns and system design.
 
-**Live frontend:** https://doj0rgk0da5sl.cloudfront.net
+** Live frontend:** https://doj0rgk0da5sl.cloudfront.net
 
 ---
 
