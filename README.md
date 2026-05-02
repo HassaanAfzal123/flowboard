@@ -8,7 +8,7 @@ Multi-tenant project management SaaS — MERN stack with JWT auth, Redis caching
 
 ## Tech stack
 
-| Layer | Technology  |
+| Layer | Technology   |
 |---|---|
 | Frontend | React 18, Vite, React Router DOM, Axios |
 | Backend | Node.js, Express, Mongoose |
