@@ -4,11 +4,11 @@ Multi-tenant project management SaaS — MERN stack with JWT auth, Redis caching
 
 ** Live frontend:**  https://doj0rgk0da5sl.cloudfront.net
 
----
+--- 
 
 ## Tech stack
 
-| Layer | Technology |
+| Layer | Technology  |
 |---|---|
 | Frontend | React 18, Vite, React Router DOM, Axios |
 | Backend | Node.js, Express, Mongoose |
