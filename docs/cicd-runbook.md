@@ -54,11 +54,13 @@ For each environment, configure:
    - `flowboard-gha-deploy-staging`
    - `flowboard-gha-deploy-prod`
 
-3. Attach trust policy constrained to this repository and branch.
+3. Attach trust policy constrained to this repository and **GitHub Environment name**.
 
-### Trust policy template
+Workflow jobs use `environment: dev | staging | production`. In that case GitHub’s OIDC `sub` is **`repo:OWNER/REPO:environment:ENV_NAME`**, not `ref:refs/heads/...`. Each IAM role should allow exactly one environment in `sub`.
 
-Replace `<ACCOUNT_ID>`, `<OWNER>`, `<REPO>`, and branch.
+### Trust policy template (one role per GitHub Environment)
+
+Replace `<ACCOUNT_ID>`, `<OWNER>`, `<REPO>`, and `<GITHUB_ENVIRONMENT_NAME>` (`dev`, `staging`, or `production`).
 
 ```json
 {
@@ -72,10 +74,8 @@ Replace `<ACCOUNT_ID>`, `<OWNER>`, `<REPO>`, and branch.
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
         "StringEquals": {
-          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-        },
-        "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:<OWNER>/<REPO>:ref:refs/heads/<BRANCH>"
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+          "token.actions.githubusercontent.com:sub": "repo:<OWNER>/<REPO>:environment:<GITHUB_ENVIRONMENT_NAME>"
         }
       }
     }
