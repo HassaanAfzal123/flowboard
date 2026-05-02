@@ -65,6 +65,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ vars.AWS_REGION }}
+          audience: sts.amazonaws.com
       - name: Build and deploy stack
         run: |
           sam build --template-file template.yaml --cached
@@ -132,6 +133,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ vars.AWS_REGION }}
+          audience: sts.amazonaws.com
       - name: Build and deploy stack
         run: |
           sam build --template-file template.yaml --cached
@@ -199,6 +201,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ vars.AWS_REGION }}
+          audience: sts.amazonaws.com
       - name: Build and deploy stack
         run: |
           sam build --template-file template.yaml --cached
